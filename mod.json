@@ -1,0 +1,136 @@
+{
+	"geode": "4.4.0",
+	"gd": {
+		"win": "2.2074",
+		"android": "2.2074",
+		"mac": "2.2074",
+		"ios": "2.2074"
+	},
+	"id": "yourname.framefix",
+	"name": "FrameFix",
+	"version": "v0.1.0",
+	"developer": "YourName",
+	"description": "Practice-mode input timing correction within a configurable tick window.",
+	"settings": {
+		"enabled": {
+			"type": "bool",
+			"name": "Enable FrameFix",
+			"description": "Master switch. Turning it off delivers any held-back inputs in order and restores normal input handling with zero added latency.",
+			"default": true
+		},
+		"mode": {
+			"type": "string",
+			"name": "Correction mode",
+			"description": "<cy>Smart</c>: shifts an input only when the predictor says it helps (currently the predictor is a stub, so Smart leaves inputs unchanged). <cy>Random</c>: randomly shifts inputs for practice (separate from Smart, they never run together). <cy>Disabled</c>: no correction.",
+			"default": "Smart",
+			"one-of": ["Smart", "Random", "Disabled"]
+		},
+		"practice-only": {
+			"type": "bool",
+			"name": "Practice mode only",
+			"description": "Only correct inputs while Practice Mode is on. Recommended.",
+			"default": true
+		},
+		"window": {
+			"type": "int",
+			"name": "Correction window (ticks)",
+			"description": "Maximum shift in either direction when <cy>Symmetric</c> is on. 0 = no correction and no added latency. Ticks are physics steps, not rendered frames.",
+			"default": 1,
+			"min": 0,
+			"max": 10,
+			"control": {
+				"arrows": true,
+				"arrow-step": 1,
+				"slider": true,
+				"input": true
+			}
+		},
+		"symmetric": {
+			"type": "bool",
+			"name": "Symmetric correction",
+			"description": "On: the window above applies to both directions. Off: use the separate earlier/later limits below.",
+			"default": true
+		},
+		"max-early": {
+			"type": "int",
+			"name": "Max ticks earlier",
+			"description": "Used when Symmetric is off. Adds this many ticks of constant input latency (see README, Timing model). 0 = no added latency.",
+			"default": 1,
+			"min": 0,
+			"max": 10,
+			"control": {
+				"arrows": true,
+				"arrow-step": 1,
+				"slider": true,
+				"input": true
+			}
+		},
+		"max-late": {
+			"type": "int",
+			"name": "Max ticks later",
+			"description": "Used when Symmetric is off.",
+			"default": 1,
+			"min": 0,
+			"max": 10,
+			"control": {
+				"arrows": true,
+				"arrow-step": 1,
+				"slider": true,
+				"input": true
+			}
+		},
+		"random-probability": {
+			"type": "int",
+			"name": "Random: probability (%)",
+			"description": "Chance that an eligible input gets a random shift. The shift is then picked uniformly among the allowed non-zero shifts.",
+			"default": 25,
+			"min": 0,
+			"max": 100,
+			"control": {
+				"arrows": true,
+				"arrow-step": 5,
+				"slider": true,
+				"input": true
+			}
+		},
+		"random-direction": {
+			"type": "string",
+			"name": "Random: direction",
+			"description": "Restricts which shifts Random may pick. Later only adds no latency.",
+			"default": "Both",
+			"one-of": ["Both", "Earlier only", "Later only"]
+		},
+		"random-affect": {
+			"type": "string",
+			"name": "Random: affected inputs",
+			"description": "Which events Random may shift.",
+			"default": "All",
+			"one-of": ["All", "Presses only", "Releases only"]
+		},
+		"random-seed": {
+			"type": "int",
+			"name": "Random: seed",
+			"description": "Same seed + same settings + same inputs = same random choices.",
+			"default": 12345,
+			"min": 0,
+			"max": 2147483647,
+			"control": {
+				"arrows": false,
+				"slider": false,
+				"input": true
+			}
+		},
+		"reseed-on-restart": {
+			"type": "bool",
+			"name": "Random: reseed on every restart",
+			"description": "Restart the random sequence from the seed on each attempt, so attempts are reproducible.",
+			"default": true
+		},
+		"debug-log": {
+			"type": "bool",
+			"name": "Debug log",
+			"description": "Write one line per input to the Geode log: original tick, scheduled tick, shift, reason. Off by default.",
+			"default": false
+		}
+	}
+}
