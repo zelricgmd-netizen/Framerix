@@ -2,10 +2,10 @@
 {
   "geode": "5.11.2",
   "gd": {
-    "win": "2.208",
-    "android": "2.208",
-    "mac": "2.208",
-    "ios": "2.208"
+    "win": "2.2081",
+    "android": "2.2081",
+    "mac": "2.2081",
+    "ios": "2.2081"
   },
   "id": "yourname.framefix",
   "name": "FrameFix",
