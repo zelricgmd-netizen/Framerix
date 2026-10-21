@@ -1,0 +1,50 @@
+# FrameFix: platform compatibility, test results, limitations
+
+## Verification ladder (what is actually true)
+
+| Level | Status |
+|---|---|
+| Core logic unit tests pass (host g++ 13, ASan + UBSan, `-Wall -Wextra -Werror`) | **Yes**: 337,766 checks, 0 failed |
+| `src/main.cpp` compiles against Geode | **No**, never attempted (no SDK in the sandbox) |
+| `.geode` package produced | **No**. None exists, none is offered. |
+| Mod loads in Geode | **No** |
+| Behavior verified in-game | **No** |
+| Verified on a real iOS device | **No** |
+
+## Stage 1: compatibility research (web search only, no SDK access)
+
+Found, from public pages (Geode docs, GitHub org listing, build action README):
+- Geode lists support for **iOS aarch64**; building for iOS needs macOS + Xcode, Geode **SDK 4.4.0+**, iOS binaries via `geode sdk install-binaries --platform ios`, then `geode build -p ios`.
+- The official `geode-sdk/build-geode-mod` action accepts `target: iOS` in a matrix, so CI can compile for iOS on a macOS runner.
+- iOS use goes through the sideloaded **Geode iOS Launcher** (SideStore or certificate, JIT or JIT-less modes, iOS 14+ per one listing). Mods are installed via the launcher's developer-mode web server (port 8080) or its mods directory.
+- Another mod's manifest lists iOS arm64 with GD 2.2074.
+
+Not verified: which GD/iOS versions your launcher currently installs, whether Files-app import works, and whether any hook below exists with the assumed signature.
+
+## Unverified assumptions in `src/main.cpp`
+
+A1 `GJBaseGameLayer::handleButton(bool down, int button, bool isPlayer1)` exists and is the point all button events pass through, including touch input that the game may queue internally.
+A2 `GJBaseGameLayer::processCommands(float)` runs once per physics step, so counting its calls gives a usable tick clock.
+A3 `PlayLayer::m_isPracticeMode` reflects Practice Mode.
+A4 `PlayLayer::resetLevel/onQuit/levelComplete` exist with these signatures.
+A5 Calling `handleButton` on the layer from our own code re-enters the hook (guarded by `delivering`).
+
+If A1 is wrong (for example, the game timestamps queued inputs into the correct sub-step before this point), delivery granularity may differ from one tick. This is the first thing to test in-game.
+
+## Design limits (not bugs)
+
+- No input can be delivered before it arrives. "Earlier" is implemented as "less delayed than a delayed reference", costing constant latency equal to max-earlier. Documented in the README.
+- Smart mode has **no real predictor**. Shipping a fake one would be dishonest. The interface, candidate search, tie-breaking and limit enforcement are implemented and tested with mock predictors only.
+- A predictor can only estimate survival from the current state with an assumed input; future inputs (when you release, what you do next) are unknown, and the creator's intended timing is not recoverable.
+- No on-screen debug overlay (log lines only). No global reset-all button (Geode provides per-setting reset).
+- Random with direction "Both" and unequal limits is uniform over shifts, not directions.
+
+## Test coverage
+
+Implemented (host, logic only): zero-tick passthrough with no latency; 1, 2, 4, 5, 10 tick windows; symmetric vs separate limits; out-of-range clamping; direction restrictions and base-delay removal when never early; Smart picks the smallest shift (not the window maximum); deterministic tie-break; no evaluation outside limits; unavailable/uncertain predictions leave inputs unchanged; Random reproducibility, seed sensitivity, probability 0/25/100, never exceeding limits; press/release filters; draw alignment; quick taps and long holds keep order; same-tick press/release; per-stream independence; flush on disable; compensating release on restart; 400-run randomized sweep checking delivery bounds, ordering, alternation, and no stuck final state.
+
+Not covered because they need the game: cube jumps, orbs, ship/wave, gravity changes, game speed, real Practice detection, pause/resume, death/restart in the engine, level transitions, settings changes mid-run through the real settings UI, and real touch input timing. These are listed in the order I would test them on a device: (1) does the mod load, (2) with Random + window 1 + debug log, do log ticks match what happens, (3) restart with a held button, (4) pause/resume with pending input.
+
+## Bug found and fixed during testing
+
+`flushAll()` left the per-stream ordering floor in place, so the first input after turning the mod off could be held back for several ticks. Fixed in `InputScheduler::flushAll`, covered by `testFlushOnDisable`.
